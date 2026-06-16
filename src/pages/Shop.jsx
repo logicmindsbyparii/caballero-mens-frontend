@@ -44,8 +44,8 @@ const Shop = () => {
     list = list.filter((p) => p.price >= priceRange[0] && p.price <= priceRange[1]);
     if (sort === 'price_asc') list.sort((a, b) => a.price - b.price);
     else if (sort === 'price_desc') list.sort((a, b) => b.price - a.price);
-    else if (sort === 'rating') list.sort((a, b) => b.rating - a.rating);
-    else if (sort === 'reviews') list.sort((a, b) => b.reviews - a.reviews);
+    else if (sort === 'rating') list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    else if (sort === 'reviews') list.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
     return list;
   }, [products, selectedCategory, search, sort, priceRange]);
 
@@ -191,9 +191,10 @@ const Shop = () => {
 
             {filtered.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {filtered.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+                {filtered.map((product) => {
+                  const cardId = product._id || product.id;
+                  return <ProductCard key={cardId} product={product} />;
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-24 text-center">
