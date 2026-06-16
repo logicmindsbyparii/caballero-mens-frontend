@@ -7,7 +7,7 @@ const ProductCard = ({ product }) => {
   const [added, setAdded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const productId = product.id || product._id;
+  const productId = product._id || product.id;
   const isInWishlist = wishlist?.includes(productId);
 
   const handleAddToCart = (e) => {
@@ -30,7 +30,7 @@ const ProductCard = ({ product }) => {
 
   return (
     <div
-      id={`product-${product.id}`}
+      id={`product-${productId}`}
       className="group relative bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-400 cursor-pointer animate-fade-up"
       onClick={() => setQuickViewProduct(product)}
     >
@@ -62,17 +62,23 @@ const ProductCard = ({ product }) => {
           </span>
         )}
 
-        {/* Offer Available Indicator */}
+        {/* Offer Available Indicator (FIXED PHANTOM BADGE LABELS) */}
         {(() => {
           const isOfferDisabled = product.noOffers === true || product.noOffers === 'true';
-          if (isOfferDisabled || availableCoupons.length === 0) return null;
+          if (isOfferDisabled || !availableCoupons || availableCoupons.length === 0) return null;
 
-          const specificCoupon = product.applicableCoupon 
+          // Double check formatting to ensure it isn't an empty string or literal 'null' string text
+          const hasAssignedCoupon = product.applicableCoupon && 
+                                    product.applicableCoupon !== 'null' && 
+                                    product.applicableCoupon !== 'undefined' && 
+                                    product.applicableCoupon.trim() !== "";
+
+          const specificCoupon = hasAssignedCoupon 
             ? availableCoupons.find(c => c.code.trim().toUpperCase() === product.applicableCoupon.trim().toUpperCase()) 
             : null;
           
-          // If a specific coupon is assigned, show ONLY that one. Otherwise show first general offer.
-          const displayCoupon = specificCoupon || (product.applicableCoupon ? null : availableCoupons[0]);
+          // Show specifically matching coupon card, or fallback to first generic coupon if no manual lock was set
+          const displayCoupon = specificCoupon || (hasAssignedCoupon ? null : availableCoupons[0]);
           
           if (!displayCoupon) return null;
 
@@ -91,7 +97,7 @@ const ProductCard = ({ product }) => {
 
         {/* Wishlist */}
         <button
-          onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id || product._id); }}
+          onClick={(e) => { e.stopPropagation(); toggleWishlist(productId); }}
           className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-400 hover:scale-110 z-20"
           aria-label="Add to wishlist"
         >
@@ -104,7 +110,7 @@ const ProductCard = ({ product }) => {
         {/* Action Buttons – appear on hover */}
         <div className="absolute bottom-0 left-0 right-0 flex gap-2 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-400 z-10">
           <button
-            id={`add-to-cart-${product.id}`}
+            id={`add-to-cart-${productId}`}
             onClick={handleAddToCart}
             className={`flex-1 py-2.5 text-xs tracking-widest uppercase font-medium transition-all duration-300 rounded-lg flex items-center justify-center gap-1.5 ${
               added
@@ -116,7 +122,7 @@ const ProductCard = ({ product }) => {
             {added ? 'Added!' : 'Add to Bag'}
           </button>
           <button
-            id={`quick-view-${product.id}`}
+            id={`quick-view-${productId}`}
             onClick={handleQuickView}
             className="w-10 h-10 bg-white/90 rounded-lg flex items-center justify-center text-charcoal hover:bg-brown hover:text-white transition-all duration-300"
             aria-label="Quick view"
@@ -143,11 +149,11 @@ const ProductCard = ({ product }) => {
               <Star
                 key={i}
                 size={11}
-                className={i < Math.floor(product.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-200 fill-gray-200'}
+                className={i < Math.floor(product.rating || 4) ? 'fill-amber-400 text-amber-400' : 'text-gray-200 fill-gray-200'}
               />
             ))}
           </div>
-          <span className="text-[10px] text-muted ml-1">({product.reviews})</span>
+          <span className="text-[10px] text-muted ml-1">({product.reviews || 0})</span>
         </div>
 
         {/* Price */}
