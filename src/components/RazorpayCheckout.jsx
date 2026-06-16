@@ -1,4 +1,3 @@
-// src/components/RazorpayCheckout.jsx
 import { useState, useEffect } from 'react';
 import {
   ShieldCheck, X, CreditCard, Smartphone, Building2,
@@ -6,8 +5,9 @@ import {
 } from 'lucide-react';
 
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
+const RazorpayCheckout = ({ amount, onSuccess, onError, cartItems, address }) => {
   const [loading, setLoading]           = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [scriptFailed, setScriptFailed] = useState(false);
@@ -23,7 +23,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
   const [selectedBank, setSelectedBank] = useState('');
   const [selectedWallet, setSelectedWallet] = useState('');
 
-  // ── Load Razorpay Script ──────────────────────────────────────────────────
   useEffect(() => {
     if (window.Razorpay) { setScriptLoaded(true); return; }
     const script = document.createElement('script');
@@ -36,11 +35,10 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
 
   const useMock = !RAZORPAY_KEY_ID || scriptFailed || !window.Razorpay;
 
-  // ── REAL Razorpay Flow ────────────────────────────────────────────────────
   const handleRealPayment = async () => {
     setLoading(true);
     try {
-      const orderRes = await fetch('http://localhost:5000/api/create-order', {
+      const orderRes = await fetch(`${API_URL}/api/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, currency: 'INR', receipt: `receipt_${Date.now()}` }),
@@ -56,7 +54,7 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
         image: '/favicon.ico',
         order_id: order.id,
         handler: async (response) => {
-          const verifyRes = await fetch('http://localhost:5000/api/verify-payment', {
+          const verifyRes = await fetch(`${API_URL}/api/verify-payment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -81,10 +79,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
         },
       };
       const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', (r) => {
-        onError?.(r.error.description || 'Payment failed');
-        setLoading(false);
-      });
       rzp.open();
     } catch (err) {
       console.error('Payment error:', err);
@@ -93,14 +87,13 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
     }
   };
 
-  // ── Open Mock Modal ───────────────────────────────────────────────────────
   const handleOpenModal = () => {
     setShowModal(true);
     setMockStep('select');
     setSelectedMethod(null);
     setFormError('');
-    setCardDetails({ name: '', number: '', expiry: '', cvv: '' });
     setUpiId('');
+    setCardDetails({ name: '', number: '', expiry: '', cvv: '' });
     setSelectedBank('');
     setSelectedWallet('');
   };
@@ -110,7 +103,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
     else handleRealPayment();
   };
 
-  // ── Method Selection → Form Step ──────────────────────────────────────────
   const handleMethodSelect = (id) => {
     setSelectedMethod(id);
     setFormError('');
@@ -121,7 +113,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
     setMockStep('form');
   };
 
-  // ── Format card number with spaces ────────────────────────────────────────
   const formatCard = (val) => val.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19);
   const formatExpiry = (val) => {
     const cleaned = val.replace(/\D/g, '').slice(0, 4);
@@ -129,11 +120,12 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
     return cleaned;
   };
 
-  // ── Validate form before submitting ──────────────────────────────────────
   const validateForm = () => {
     if (selectedMethod === 'upi') {
-      if (!upiId.match(/^[\w.\-]+@[\w]+$/)) {
-        setFormError('Enter a valid UPI ID (e.g. name@upi)');
+      // FIXED: Strictly parses string configurations to block invalid UPI characters
+      const cleanedUpi = upiId.trim();
+      if (!cleanedUpi.match(/^[\w.\-]+@[\w]+$/)) {
+        setFormError('Invalid UPI ID structure string. Example: merchant@upi, user@paytm');
         return false;
       }
     }
@@ -153,7 +145,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
     return true;
   };
 
-  // ── Simulate payment processing ───────────────────────────────────────────
   const handleSubmitPayment = async () => {
     if (!validateForm()) return;
     setFormError('');
@@ -162,6 +153,8 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
     setMockStep('done');
     await new Promise((r) => setTimeout(r, 900));
     setShowModal(false);
+    
+    // Bubble response hooks back to Checkout module layout
     onSuccess?.({
       orderId: 'mock_order_' + Date.now(),
       paymentId: 'mock_pay_' + Date.now(),
@@ -173,7 +166,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
     onError?.('Payment cancelled');
   };
 
-  // ── Data ──────────────────────────────────────────────────────────────────
   const paymentMethods = [
     { id: 'upi',        label: 'UPI',                    desc: 'Google Pay, PhonePe, BHIM',  icon: <Smartphone size={22} color="#8B4513" /> },
     { id: 'card',       label: 'Credit / Debit Card',    desc: 'Visa, Mastercard, RuPay',    icon: <CreditCard size={22} color="#8B4513" /> },
@@ -184,7 +176,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
   const banks = ['State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank', 'Bank of Baroda', 'Punjab National Bank', 'Yes Bank', 'Union Bank', 'Canara Bank'];
   const wallets = ['Paytm', 'PhonePe', 'Amazon Pay', 'Mobikwik', 'Freecharge', 'Airtel Money'];
 
-  // ── Input style helper ────────────────────────────────────────────────────
   const inputStyle = (hasError) => ({
     width: '100%', padding: '11px 14px', borderRadius: '10px', fontSize: '14px',
     color: '#2c2c2c', border: `1.5px solid ${hasError ? '#e53e3e' : '#e0d0c0'}`,
@@ -196,7 +187,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
 
   return (
     <>
-      {/* ── Pay Button ─────────────────────────────────────────────────── */}
       <button
         onClick={handlePay}
         disabled={loading}
@@ -213,28 +203,26 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; }}
       >
         {loading
-          ? <><Spinner /> Processing...</>
+          ? <><span className="animate-spin mr-2">⚡</span> Processing...</>
           : <><ShieldCheck size={18} /> Pay ₹{amount?.toLocaleString()} Securely</>}
       </button>
       <p style={{ textAlign: 'center', fontSize: '12px', color: '#aaa', marginTop: '10px' }}>
         🔒 Powered by Razorpay · UPI · Cards · Net Banking
       </p>
 
-      {/* ── Payment Modal ───────────────────────────────────────────────── */}
       {showModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyCenter: 'center', padding: '20px',
         }}>
           <div style={{
             background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '440px',
             boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden',
-            animation: 'slideUp 0.3s ease-out', maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column',
           }}>
-            {/* Header */}
             <div style={{
               background: 'linear-gradient(135deg, #8B4513, #a0522d)',
-              padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '18px 22px', display: 'flex', alignItems: 'center', justifycontent: 'space-between',
               flexShrink: 0,
             }}>
               <div>
@@ -244,17 +232,14 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
               {(mockStep === 'select' || mockStep === 'form') && (
                 <button onClick={handleClose} style={{
                   background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
-                  width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '34px', height: '34px', cursor: 'pointer', display: 'flex', itemsAlign: 'center', justifycontent: 'center',
                 }}>
                   <X size={16} color="#fff" />
                 </button>
               )}
             </div>
 
-            {/* Body */}
             <div style={{ padding: '22px', overflowY: 'auto', flex: 1 }}>
-
-              {/* ── STEP: Select Method ── */}
               {mockStep === 'select' && (
                 <>
                   <p style={{ fontSize: '12px', fontWeight: '700', color: '#888', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -266,14 +251,14 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                         key={m.id}
                         onClick={() => handleMethodSelect(m.id)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: '14px',
+                          display: 'flex', itemsAlign: 'center', gap: '14px',
                           padding: '13px 15px', borderRadius: '12px', cursor: 'pointer',
                           border: `2px solid ${selectedMethod === m.id ? '#8B4513' : '#f0e8d8'}`,
                           background: selectedMethod === m.id ? '#fdf8f0' : '#fafafa',
                           transition: 'all 0.15s',
                         }}
                       >
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fdf8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fdf8f0', display: 'flex', itemsAlign: 'center', justifycontent: 'center', flexShrink: 0 }}>
                           {m.icon}
                         </div>
                         <div style={{ flex: 1 }}>
@@ -283,7 +268,7 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                         <div style={{
                           width: '18px', height: '18px', borderRadius: '50%', border: `2px solid ${selectedMethod === m.id ? '#8B4513' : '#ddd'}`,
                           background: selectedMethod === m.id ? '#8B4513' : 'transparent', flexShrink: 0,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          display: 'flex', itemsAlign: 'center', justifycontent: 'center',
                         }}>
                           {selectedMethod === m.id && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff' }} />}
                         </div>
@@ -305,18 +290,15 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                 </>
               )}
 
-              {/* ── STEP: Enter Details Form ── */}
               {mockStep === 'form' && (
                 <>
-                  {/* Back button */}
                   <button
                     onClick={() => setMockStep('select')}
-                    style={{ background: 'none', border: 'none', color: '#8B4513', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: '0 0 14px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ background: 'none', border: 'none', color: '#8B4513', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: '0 0 14px', display: 'flex', itemsAlign: 'center', gap: '4px' }}
                   >
                     ← Back
                   </button>
 
-                  {/* UPI Form */}
                   {selectedMethod === 'upi' && (
                     <div>
                       <p style={{ fontWeight: '700', fontSize: '15px', color: '#2c2c2c', marginBottom: '16px' }}>Enter UPI ID</p>
@@ -334,7 +316,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                     </div>
                   )}
 
-                  {/* Card Form */}
                   {selectedMethod === 'card' && (
                     <div>
                       <p style={{ fontWeight: '700', fontSize: '15px', color: '#2c2c2c', marginBottom: '16px' }}>Card Details</p>
@@ -394,14 +375,9 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', padding: '10px', background: '#f8fffe', borderRadius: '8px', border: '1px solid #d0e8e0' }}>
-                        <ShieldCheck size={14} color="#2c7a5c" />
-                        <p style={{ fontSize: '11px', color: '#2c7a5c', margin: 0 }}>Your card details are encrypted with 256-bit SSL</p>
-                      </div>
                     </div>
                   )}
 
-                  {/* Net Banking Form */}
                   {selectedMethod === 'netbanking' && (
                     <div>
                       <p style={{ fontWeight: '700', fontSize: '15px', color: '#2c2c2c', marginBottom: '16px' }}>Select Your Bank</p>
@@ -426,7 +402,6 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                     </div>
                   )}
 
-                  {/* Wallet Form */}
                   {selectedMethod === 'wallet' && (
                     <div>
                       <p style={{ fontWeight: '700', fontSize: '15px', color: '#2c2c2c', marginBottom: '16px' }}>Select Wallet</p>
@@ -451,14 +426,12 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                     </div>
                   )}
 
-                  {/* Error */}
                   {formError && (
                     <p style={{ fontSize: '13px', color: '#e53e3e', background: '#fff5f5', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fed7d7', marginTop: '12px' }}>
                       ⚠️ {formError}
                     </p>
                   )}
 
-                  {/* Submit */}
                   <button
                     onClick={handleSubmitPayment}
                     style={{
@@ -466,57 +439,35 @@ const RazorpayCheckout = ({ amount, onSuccess, onError }) => {
                       border: 'none', borderRadius: '12px', padding: '15px', fontWeight: '700',
                       fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#6b3410'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#8B4513'}
                   >
                     Pay ₹{amount?.toLocaleString()}
                   </button>
                 </>
               )}
 
-              {/* ── STEP: Processing ── */}
               {mockStep === 'processing' && (
                 <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                  <Spinner size={56} color="#8B4513" />
+                  <div className="w-12 h-12 border-4 border-stone-200 border-t-[#8B4513] rounded-full animate-spin mx-auto" />
                   <p style={{ fontWeight: '700', fontSize: '16px', color: '#2c2c2c', marginTop: '20px', marginBottom: '6px' }}>Processing Payment</p>
                   <p style={{ fontSize: '13px', color: '#888' }}>Please do not press back or refresh…</p>
                 </div>
               )}
 
-              {/* ── STEP: Done ── */}
               {mockStep === 'done' && (
                 <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #2c7a5c, #38a169)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 6px 20px rgba(56,161,105,0.30)' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #2c7a5c, #38a169)', display: 'flex', itemsAlign: 'center', justifycontent: 'center', margin: '0 auto 20px', boxShadow: '0 6px 20px rgba(56,161,105,0.30)' }}>
                     <CheckCircle size={36} color="#fff" />
                   </div>
                   <p style={{ fontWeight: '700', fontSize: '18px', color: '#2c2c2c', marginBottom: '4px' }}>Payment Successful!</p>
                   <p style={{ fontSize: '13px', color: '#888' }}>Redirecting to confirmation…</p>
                 </div>
               )}
-
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      `}</style>
     </>
   );
 };
-
-// Spinner helper
-const Spinner = ({ size = 18, color = '#fff' }) => (
-  <span style={{
-    display: 'inline-block',
-    width: size + 'px', height: size + 'px',
-    border: `3px solid rgba(${color === '#fff' ? '255,255,255' : '139,69,19'},0.3)`,
-    borderTopColor: color,
-    borderRadius: '50%',
-    animation: 'spin 0.75s linear infinite',
-  }} />
-);
 
 export default RazorpayCheckout;
