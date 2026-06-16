@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Trash2, User, Mail, Clock, MessageCircle, Send } from 'lucide-react';
+import { Trash2, Mail, Clock, MessageCircle, Send } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -12,13 +14,13 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      console.log('Fetching users from backend...');
-      const res = await fetch('http://localhost:5000/api/admin/users');
+      console.log('Fetching users from live backend repository location...');
+      const res = await fetch(`${API_URL}/api/admin/users`);
       
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const text = await res.text();
-        console.error('Expected JSON but got:', text.substring(0, 100));
+        console.error('Expected JSON but got standard text payload:', text.substring(0, 100));
         return;
       }
 
@@ -27,7 +29,7 @@ const AdminUsers = () => {
         setUsers(result.data);
       }
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error('Fetch operation error tracker:', err);
     } finally {
       setLoading(false);
     }
@@ -36,12 +38,12 @@ const AdminUsers = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this user?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
+      const res = await fetch(`${API_URL}/api/admin/users/${id}`, {
         method: 'DELETE'
       });
       const result = await res.json();
       if (result.success) {
-        fetchUsers(); // refresh list
+        fetchUsers(); // refresh data metrics list array
       }
     } catch (err) {
       console.error(err);
@@ -53,16 +55,14 @@ const AdminUsers = () => {
       alert('No phone number available for this user.');
       return;
     }
-    // Clean phone number (remove non-digits)
     const cleanPhone = phone.replace(/\D/g, '');
     const msg = encodeURIComponent(broadcastMsg.replace('{name}', name));
     window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
   };
 
   const handleWhatsAppAll = () => {
-    if (!window.confirm(`This will open WhatsApp for ${users.length} users. Continue?`)) return;
+    if (!window.confirm(`This will open WhatsApp communication gates for ${users.length} users. Continue?`)) return;
     users.forEach((user, index) => {
-      // We use a small timeout to prevent browser from blocking multiple popups
       setTimeout(() => {
         if (user.phone) {
           const cleanPhone = user.phone.replace(/\D/g, '');
@@ -73,10 +73,10 @@ const AdminUsers = () => {
     });
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="text-center py-20 text-stone-400 italic text-sm">Synchronizing Cloud Users Directory...</div>;
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm p-8 border border-beige/50">
+    <div className="bg-white rounded-3xl shadow-sm p-8 border border-beige/50 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="font-serif text-2xl text-charcoal">Marketing Hub</h2>
@@ -105,7 +105,7 @@ const AdminUsers = () => {
       </div>
 
       {users.length === 0 ? (
-        <p className="text-muted text-center py-10">No users found in database.</p>
+        <p className="text-stone-400 text-center py-16 italic text-sm">No registered users found in database cloud cluster.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -121,58 +121,61 @@ const AdminUsers = () => {
               </tr>
             </thead>
             <tbody>
-               {users.map(user => (
-                <tr key={user.id} className="border-b border-stone-50 hover:bg-stone-50/30 transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-beige flex items-center justify-center text-brown font-bold text-xs">
-                        {user.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium text-charcoal">{user.name}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2 text-charcoal group">
-                        <Mail size={12} className="text-stone-300" />
-                        <span className="text-xs">{user.email}</span>
-                      </div>
-                      {user.phone && (
-                        <div className="flex items-center gap-2 text-stone-500">
-                          <MessageCircle size={12} className="text-green-400" />
-                          <span className="text-[11px]">{user.phone}</span>
+               {users.map(user => {
+                const userId = user._id || user.id;
+                return (
+                  <tr key={userId} className="border-b border-stone-50 hover:bg-stone-50/30 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-beige flex items-center justify-center text-brown font-bold text-xs">
+                          {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                         </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <Clock size={12} className="text-stone-300" />
-                      <span className="text-xs text-stone-600">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openWhatsApp(user.phone, user.name)}
-                        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-all"
-                        title="Send WhatsApp"
-                      >
-                        <MessageCircle size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
-                        title="Delete User"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <span className="font-medium text-charcoal">{user.name || 'Anonymous Guest'}</span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2 text-charcoal group">
+                          <Mail size={12} className="text-stone-300" />
+                          <span className="text-xs">{user.email}</span>
+                        </div>
+                        {user.phone && (
+                          <div className="flex items-center gap-2 text-stone-500">
+                            <MessageCircle size={12} className="text-green-400" />
+                            <span className="text-[11px]">{user.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Clock size={12} className="text-stone-300" />
+                        <span className="text-xs text-stone-600">
+                          {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openWhatsApp(user.phone, user.name)}
+                          className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-600 hover:text-white transition-all"
+                          title="Send WhatsApp"
+                        >
+                          <MessageCircle size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(userId)}
+                          className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                          title="Delete User"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+               })}
             </tbody>
           </table>
         </div>
