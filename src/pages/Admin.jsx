@@ -9,6 +9,9 @@ import AdminUsers from '../components/AdminUsers';
 
 const CATEGORIES = ['Formal Pants', 'Tshirt', 'Shirt', 'Blazers', 'Kurta', 'Track Pants'];
 
+// Dynamically extracts the deployment platform API environment address 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const emptyForm = {
   name: '', category: 'Shirt', price: '', originalPrice: '',
   description: '', badge: '', inStock: true, image: null, noOffers: false,
@@ -112,7 +115,7 @@ const Admin = () => {
 
   const fetchMarketingData = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/admin/users');
+      const res = await fetch(`${API_URL}/api/admin/users`);
       const result = await res.json();
       if (result.success) setMarketingUsers(result.data);
     } catch (err) { console.error(err); }
@@ -120,7 +123,7 @@ const Admin = () => {
 
   const fetchAvailableCoupons = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/coupons');
+      const res = await fetch(`${API_URL}/api/coupons`);
       const result = await res.json();
       if (result.success) setCoupons(result.data);
     } catch (err) { console.error(err); }
@@ -128,7 +131,7 @@ const Admin = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/orders');
+      const res = await fetch(`${API_URL}/api/orders`);
       const result = await res.json();
       if (result.success) setOrders(result.data);
     } catch (err) { console.error(err); }
@@ -136,7 +139,7 @@ const Admin = () => {
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+      const res = await fetch(`${API_URL}/api/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -152,7 +155,7 @@ const Admin = () => {
   const handleDeleteOrder = async (orderId) => {
     if (!window.confirm('Delete this order?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/orders/${orderId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/orders/${orderId}`, { method: 'DELETE' });
       const result = await res.json();
       if (result.success) {
         showSuccess('Order Deleted');
@@ -164,7 +167,7 @@ const Admin = () => {
   const handleCreateCoupon = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:5000/api/coupons', {
+      const res = await fetch(`${API_URL}/api/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(couponForm)
@@ -239,7 +242,7 @@ const Admin = () => {
          <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
          <aside className="relative bg-white w-3/4 h-full shadow-2xl p-6">
             <div className="flex justify-between items-center mb-8">
-               <h2 className="text-xl font-serif font-bold text-[#c24b10]">Management</h2>
+               <h2 className="text-xl font-serif font-bold text-stone-900">Management</h2>
                <button onClick={() => setMobileMenuOpen(false)}><X size={20} className="text-stone-400" /></button>
             </div>
             <div className="space-y-2">
@@ -312,7 +315,7 @@ const Admin = () => {
                   <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-stone-400 px-1">Assigned Coupon Special</label>
                    <select className="w-full p-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#c24b10] text-sm" value={form.applicableCoupon} onChange={e => setForm({...form, applicableCoupon: e.target.value})}>
                     <option value="">No Special Discount</option>
-                    {coupons.map(c => <option key={c.id} value={c.code}>{c.code} ({c.discount}{c.type === 'percentage' ? '%' : ' OFF'})</option>)}
+                    {coupons.map(c => <option key={c._id || c.id} value={c.code}>{c.code} ({c.discount}{c.type === 'percentage' ? '%' : ' OFF'})</option>)}
                   </select>
                 </div>
               </div>
@@ -374,12 +377,12 @@ const Admin = () => {
                     </thead>
                     <tbody>
                        {coupons.map(c => (
-                         <tr key={c.id} className="border-b border-stone-50 hover:bg-stone-50/30 transition-colors group">
+                         <tr key={c._id || c.id} className="border-b border-stone-50 hover:bg-stone-50/30 transition-colors group">
                            <td className="p-4 font-bold text-stone-900">{c.code}</td>
                            <td className="p-4 text-stone-600 font-medium">{c.discount}</td>
                            <td className="p-4 text-[9px] font-bold text-stone-400 uppercase tracking-tighter">{c.type}</td>
                            <td className="p-4 text-right">
-                              <button onClick={() => handleDeleteOrder(c.id)} className="p-2 text-stone-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16} /></button>
+                              <button onClick={() => handleDeleteOrder(c._id || c.id)} className="p-2 text-stone-200 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16} /></button>
                            </td>
                          </tr>
                        ))}
@@ -411,13 +414,13 @@ const Admin = () => {
               
               {orders.length === 0 ? <p className="text-center py-20 text-stone-300 italic">No sales recorded yet.</p> : 
                orders.map(order => (
-                 <div key={order.id} className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-stone-100 hover:shadow-md transition-all group">
+                 <div key={order._id || order.id} className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-stone-100 hover:shadow-md transition-all group">
                     <div className="flex justify-between gap-4 flex-wrap pb-6 border-b border-stone-50 mb-6">
                        <div className="flex items-center gap-4">
                           <div className="w-14 h-14 bg-stone-900 text-white rounded-[1.5rem] flex items-center justify-center font-bold text-lg shadow-lg">{order.userName?.charAt(0)}</div>
                           <div>
                              <p className="font-bold text-stone-900 uppercase tracking-tight">{order.userName}</p>
-                             <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">{new Date(order.createdAt).toLocaleString()} • {order.id}</p>
+                             <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">{new Date(order.createdAt).toLocaleString()} • {order._id || order.id}</p>
                           </div>
                        </div>
                        <div className="flex items-center gap-4 md:gap-8">
@@ -425,7 +428,7 @@ const Admin = () => {
                              <p className="text-2xl font-serif font-bold text-stone-900">₹{order.total.toLocaleString()}</p>
                              <span className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${order.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>{order.status}</span>
                           </div>
-                          <button onClick={() => handleDeleteOrder(order.id)} className="p-3 text-stone-100 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all group-hover:text-stone-300"><Trash2 size={20} /></button>
+                          <button onClick={() => handleDeleteOrder(order._id || order.id)} className="p-3 text-stone-100 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all group-hover:text-stone-300"><Trash2 size={20} /></button>
                        </div>
                     </div>
                     
@@ -436,7 +439,12 @@ const Admin = () => {
                              {order.items.map((it, i) => (
                                 <div key={i} className="flex justify-between items-center p-3 bg-stone-50/50 rounded-2xl border border-stone-100/50">
                                    <div className="flex items-center gap-3">
-                                      <img src={it.image} className="w-10 h-10 rounded-lg object-cover" alt="" />
+                                      <img 
+                                        src={it.image} 
+                                        className="w-10 h-10 rounded-lg object-cover" 
+                                        alt="" 
+                                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200&q=80'; }}
+                                      />
                                       <span className="text-sm font-bold text-stone-700">{it.name} <span className="text-stone-300 ml-1">x{it.quantity}</span></span>
                                    </div>
                                    <span className="text-sm font-bold text-stone-900">₹{(it.price * it.quantity).toLocaleString()}</span>
@@ -460,12 +468,12 @@ const Admin = () => {
                              )}
                              <hr className="border-stone-100" />
                              <div className="flex justify-between items-center pt-2">
-                                <span className="text-stone-900 font-bold uppercase tracking-widest text-[10px]">Settled Total</span>
+                                <span className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">Settled Total</span>
                                 <span className="text-2xl font-serif font-bold text-[#c24b10]">₹{order.total.toLocaleString()}</span>
                              </div>
                              {order.status === 'Pending' && (
                                 <button 
-                                  onClick={() => handleUpdateStatus(order.id, 'Paid')} 
+                                  onClick={() => handleUpdateStatus(order._id || order.id, 'Paid')} 
                                   className="w-full mt-4 bg-white border-2 border-[#c24b10] text-[#c24b10] py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#c24b10] hover:text-white transition-all shadow-md active:scale-95"
                                 >
                                    Mark as Delivered & Settled
@@ -494,7 +502,12 @@ const Admin = () => {
                    {allReviews.map((r, i) => (
                       <div key={i} className="flex flex-col sm:flex-row gap-6 p-6 rounded-[2rem] bg-stone-50/50 border border-transparent hover:border-stone-100 hover:bg-white transition-all group shadow-sm hover:shadow-xl hover:-translate-y-1">
                          <div className="w-full sm:w-24 h-32 sm:h-32 rounded-2xl overflow-hidden shrink-0 shadow-md">
-                            <img src={r.productImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
+                            <img 
+                              src={r.productImage} 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                              alt="" 
+                              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200&q=80'; }}
+                            />
                          </div>
                          <div className="flex-1 flex flex-col justify-between">
                             <div>
@@ -561,7 +574,12 @@ const Admin = () => {
                          <tr key={p._id || p.id} className="border-b border-stone-50 hover:bg-[#FAF9F6]/50 transition-colors group">
                             <td className="p-6 flex items-center gap-5">
                                <div className="relative">
-                                  <img src={p.image} className="w-16 h-16 rounded-[1.2rem] object-cover shadow-md group-hover:scale-110 transition-transform duration-500" alt="" />
+                                  <img 
+                                    src={p.image} 
+                                    className="w-16 h-16 rounded-[1.2rem] object-cover shadow-md group-hover:scale-110 transition-transform duration-500" 
+                                    alt="" 
+                                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200&q=80'; }}
+                                  />
                                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                                </div>
                                <div>
@@ -592,7 +610,12 @@ const Admin = () => {
                     {products.map(p => (
                       <div key={p._id || p.id} className="bg-[#FAF9F6]/50 p-4 rounded-3xl border border-stone-100 space-y-4">
                          <div className="flex items-center gap-4">
-                            <img src={p.image} className="w-20 h-24 rounded-2xl object-cover shadow-lg" alt="" />
+                            <img 
+                              src={p.image} 
+                              className="w-20 h-24 rounded-2xl object-cover shadow-lg" 
+                              alt="" 
+                              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200&q=80'; }}
+                            />
                             <div className="flex-1">
                                <p className="text-[10px] text-[#c24b10] font-bold uppercase tracking-widest">{p.category}</p>
                                <h3 className="text-base font-serif font-bold text-stone-900">{p.name}</h3>
