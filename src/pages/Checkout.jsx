@@ -1,15 +1,17 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { ShieldCheck, MapPin, CreditCard, ChevronRight, Lock } from 'lucide-react';
 import RazorpayCheckout from '../components/RazorpayCheckout';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Checkout = () => {
   const { cart, clearCart, user } = useStore();
   const navigate = useNavigate();
-  const paymentDone = useRef(false); // prevents empty-cart guard from firing after payment
+  const paymentDone = useRef(false);
 
-  const [step, setStep] = useState(1); // 1 = Address, 2 = Payment
+  const [step, setStep] = useState(1);
   const [address, setAddress] = useState({
     fullName: user?.name || '',
     phone: '',
@@ -19,6 +21,7 @@ const Checkout = () => {
     state: '',
   });
   const [errors, setErrors] = useState({});
+  const [brokenImages, setBrokenImages] = useState({});
 
   const subtotal = (cart || []).reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 1999 ? 0 : 99;
@@ -47,14 +50,13 @@ const Checkout = () => {
   };
 
   const handlePaymentSuccess = async (paymentData) => {
-    paymentDone.current = true; // mark payment complete BEFORE clearing cart
+    paymentDone.current = true;
     try {
-      // Save order to backend
-      await fetch('http://localhost:5000/api/orders', {
+      await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user?.id || 'guest',
+          userId: user?.id || user?._id || 'guest',
           userName: address.fullName,
           items: cart,
           subtotal,
@@ -76,6 +78,12 @@ const Checkout = () => {
     console.error('Payment error:', error);
   };
 
+  const handleImageError = (itemId) => {
+    setBrokenImages(prev => ({ ...prev, [itemId]: true }));
+  };
+
+  const fallbackImg = `https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80`;
+
   if (!paymentDone.current && (!cart || cart.length === 0)) {
     navigate('/cart');
     return null;
@@ -85,12 +93,10 @@ const Checkout = () => {
     <div style={{ minHeight: '100vh', background: '#fdf8f0', paddingTop: '80px', paddingBottom: '60px' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 20px' }}>
 
-        {/* Page Header */}
         <div style={{ marginBottom: '32px' }}>
           <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '2rem', color: '#2c2c2c', marginBottom: '8px' }}>
             Checkout
           </h1>
-          {/* Step Indicator */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px',
@@ -119,9 +125,7 @@ const Checkout = () => {
         <ResponsiveStyle />
         <div className="checkout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '28px', alignItems: 'start' }}>
 
-          {/* Left: Form */}
           <div>
-            {/* STEP 1: Address */}
             {step === 1 && (
               <div style={{
                 background: '#fff', borderRadius: '16px', padding: '28px',
@@ -203,16 +207,14 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* STEP 2: Payment */}
             {step === 2 && (
               <div style={{
                 background: '#fff', borderRadius: '16px', padding: '28px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0e8d8'
               }}>
-                {/* Confirmed Address */}
                 <div style={{
                   background: '#fdf8f0', borderRadius: '10px', padding: '14px 16px',
-                  marginBottom: '24px', border: '1px solid #e8d8c0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'
+                  marginBottom: '24px', border: '1px solid #e8d8c0', display: 'flex', justifycontent: 'space-between', alignitems: 'flex-start'
                 }}>
                   <div>
                     <p style={{ fontSize: '12px', color: '#8B4513', fontWeight: '700', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px' }}>
@@ -232,7 +234,6 @@ const Checkout = () => {
                   </button>
                 </div>
 
-                {/* Payment Section */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                   <CreditCard size={22} color="#8B4513" />
                   <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '1.3rem', color: '#2c2c2c', margin: 0 }}>
@@ -247,12 +248,11 @@ const Checkout = () => {
                   <p style={{ fontSize: '13px', color: '#2c7a5c', fontWeight: '600', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <ShieldCheck size={15} /> 100% Secure Payments
                   </p>
-                  <p style={{ fontSize: '13px', color: '#555', lineHeight: '1.5' }}>
+                  <p style={{ fontSize: '13px', color: '#555', lineheight: '1.5' }}>
                     Pay securely using UPI, Credit/Debit Cards, Net Banking, or Wallets via Razorpay.
                   </p>
                 </div>
 
-                {/* Razorpay Payment Button */}
                 <RazorpayCheckout
                   amount={total}
                   onSuccess={handlePaymentSuccess}
@@ -263,7 +263,7 @@ const Checkout = () => {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '16px' }}>
                   <Lock size={12} color="#999" />
-                  <p style={{ fontSize: '12px', color: '#999', textAlign: 'center' }}>
+                  <p style={{ fontSize: '12px', color: '#999', textalign: 'center' }}>
                     Your payment info is encrypted and never stored on our servers
                   </p>
                 </div>
@@ -271,7 +271,6 @@ const Checkout = () => {
             )}
           </div>
 
-          {/* Right: Order Summary */}
           <div style={{
             background: '#fff', borderRadius: '16px', padding: '24px',
             boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #f0e8d8',
@@ -281,16 +280,16 @@ const Checkout = () => {
               Order Summary
             </h2>
 
-            {/* Items */}
             <div style={{ marginBottom: '16px', maxHeight: '280px', overflowY: 'auto' }}>
               {(cart || []).map((item) => {
                 const itemId = item._id || item.id;
                 return (
                   <div key={itemId} style={{ display: 'flex', gap: '12px', marginBottom: '14px', alignItems: 'center' }}>
                     <img
-                      src={item.image}
+                      src={brokenImages[itemId] ? fallbackImg : item.image}
                       alt={item.name}
-                      style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #f0e8d8', flexShrink: 0 }}
+                      onError={() => handleImageError(itemId)}
+                      style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #f0e8d8', flexShrink: 0, background: '#fafafa' }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '13px', fontWeight: '600', color: '#2c2c2c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -335,7 +334,6 @@ const Checkout = () => {
   );
 };
 
-// Reusable Input Field
 const InputField = ({ label, value, onChange, placeholder, error, type = 'text', maxLength }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
     <label style={{ fontSize: '13px', fontWeight: '600', color: '#444' }}>{label}</label>
@@ -358,7 +356,6 @@ const InputField = ({ label, value, onChange, placeholder, error, type = 'text',
   </div>
 );
 
-// Inject responsive styles globally
 const ResponsiveStyle = () => (
   <style>{`
     @media (max-width: 768px) {
