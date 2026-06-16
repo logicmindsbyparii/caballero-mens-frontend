@@ -2,18 +2,10 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const StoreContext = createContext(null);
 
-export const StoreProvider = ({ children }) => {
-  // ─── INITIAL DATA ────────────────────────────────────────────────────────
-  const initialProducts = [
-    { id: 1, name: "Premium Silk Kurta", category: "Kurta", price: 2999, mrp: 4500, stock: 10, badge: "New", image: "https://images.unsplash.com/photo-1597910037310-7dd8ddb93e24?auto=format&fit=crop&q=80&w=800" },
-    { id: 2, name: "Formal Slim Fit Pants", category: "Formal Pants", price: 1899, mrp: 2800, stock: 15, badge: "Classic", image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&q=80&w=800" },
-    { id: 3, name: "Navy Royal Blazer", category: "Blazers", price: 5499, mrp: 7500, stock: 5, badge: "Luxury", image: "https://images.unsplash.com/photo-1594932224828-b4b059b6f68e?auto=format&fit=crop&q=80&w=800" },
-    { id: 4, name: "Cotton Casual Shirt", category: "Shirt", price: 1299, mrp: 1999, stock: 20, badge: "Trending", image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=800" },
-    { id: 5, name: "Classic White Tshirt", category: "Tshirt", price: 799, mrp: 1200, stock: 25, badge: "Essential", image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800" },
-    { id: 6, name: "Athletic Track Pants", category: "Track Pants", price: 1100, mrp: 1600, stock: 12, badge: "Active", image: "https://images.unsplash.com/photo-1515434126000-961d90ff09db?auto=format&fit=crop&q=80&w=800" }
-  ];
-  const API_URL = 'http://localhost:5000/api';
+// Cleansed to read base root context domain dynamically from Vercel variables
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+export const StoreProvider = ({ children }) => {
   // ─── STATES ──────────────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,22 +27,28 @@ export const StoreProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // ─── PERSISTENCE ─────────────────────────────────────────────────────────
+  // ─── PERSISTENCE & DATA DATA FETCHING ────────────────────────────────────
   const fetchProducts = useCallback(async () => {
-    setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/products`);
+      setLoading(true);
+      // Correct alignment path to eliminate nested /api duplicates
+      const res = await fetch(`${API_URL}/api/products`);
       const data = await res.json();
-      if (data.success) {
+      
+      if (data.success && Array.isArray(data.data)) {
         setProducts(data.data);
+      } else if (Array.isArray(data)) {
+        // Fallback catch if backend pipeline outputs list arrays without wrapper object objects
+        setProducts(data);
       } else {
-        setProducts(initialProducts);
+        setProducts([]);
       }
     } catch (err) {
-      console.error('Fetch error:', err);
-      setProducts(initialProducts);
+      console.error('Fetch products error connection:', err);
+      setProducts([]); // Fails cleanly instead of rendering stale mocked layouts
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
@@ -63,17 +61,16 @@ export const StoreProvider = ({ children }) => {
     localStorage.setItem('caballero_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  // Polling for real-time updates (every 5 seconds for near-instant feel)
+  // Real-time server state pooling integration synchronization
   useEffect(() => {
     const interval = setInterval(() => {
       fetchProducts();
       fetchAvailableCoupons();
-    }, 5000); // 5 seconds
+    }, 5000);
     return () => clearInterval(interval);
   }, [fetchProducts]);
 
   // ─── AUTHENTICATION (WITH CART CLEARING LOGIC) ───────────────────────────
-  
   const adminLogin = (username, password) => {
     if (username === 'caballero_admin' && password === 'Caballero@2025') {
       setIsAdminLoggedIn(true);
@@ -90,7 +87,7 @@ export const StoreProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -103,13 +100,13 @@ export const StoreProvider = ({ children }) => {
       }
       return { success: false, message: data.message };
     } catch (err) {
-      return { success: false, message: 'Server error' };
+      return { success: false, message: 'Server error connection issue' };
     }
   };
 
   const signup = async (userData) => {
     try {
-      const res = await fetch(`${API_URL}/auth/signup`, {
+      const res = await fetch(`${API_URL}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
@@ -122,24 +119,23 @@ export const StoreProvider = ({ children }) => {
       }
       return { success: false, message: data.message };
     } catch (err) {
-      return { success: false, message: 'Server error' };
+      return { success: false, message: 'Server error connection issue' };
     }
   };
 
-  // FIXED: This now clears the User AND the Cart
   const logout = () => {
     setUser(null);
-    setCart([]); // Reset Cart State
+    setCart([]); 
     localStorage.removeItem('caballero_user');
-    localStorage.removeItem('caballero_cart'); // Clear Cart Storage
+    localStorage.removeItem('caballero_cart');
   };
 
   // ─── PRODUCT CRUD (FormData supported for add) ───────────────────────────
   const addProduct = async (formData) => {
     try {
-      const res = await fetch(`${API_URL}/products`, {
+      const res = await fetch(`${API_URL}/api/products`, {
         method: 'POST',
-        body: formData, // Sending FormData directly for image upload
+        body: formData, 
       });
       const data = await res.json();
       if (data.success) {
@@ -156,7 +152,7 @@ export const StoreProvider = ({ children }) => {
   const updateProduct = async (id, updates) => {
     try {
       const isFormData = updates instanceof FormData;
-      const res = await fetch(`${API_URL}/products/${id}`, {
+      const res = await fetch(`${API_URL}/api/products/${id}`, {
         method: 'PUT',
         headers: isFormData ? {} : { 'Content-Type': 'application/json' },
         body: isFormData ? updates : JSON.stringify(updates),
@@ -174,7 +170,7 @@ export const StoreProvider = ({ children }) => {
 
   const deleteProduct = async (id) => {
     try {
-      const res = await fetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/products/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setProducts(prev => prev.filter(p => (p._id !== id && p.id !== id)));
@@ -186,7 +182,7 @@ export const StoreProvider = ({ children }) => {
 
   const submitReview = async (productId, reviewData) => {
     try {
-      const res = await fetch(`${API_URL}/products/${productId}/review`, {
+      const res = await fetch(`${API_URL}/api/products/${productId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reviewData),
@@ -204,7 +200,7 @@ export const StoreProvider = ({ children }) => {
 
   const deleteReview = async (productId, reviewId) => {
     try {
-      const res = await fetch(`${API_URL}/products/${productId}/review/${reviewId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/products/${productId}/review/${reviewId}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         setProducts(prev => prev.map(p => (p.id === productId || p._id === productId) ? data.product : p));
@@ -216,14 +212,14 @@ export const StoreProvider = ({ children }) => {
 
   const fetchUserOrders = async (userId) => {
     try {
-      const res = await fetch(`${API_URL}/users/${userId}/orders`);
+      const res = await fetch(`${API_URL}/api/users/${userId}/orders`);
       const data = await res.json();
       if (data.success) return data.data;
       return [];
     } catch (err) { return []; }
   };
 
-  // ─── CART & WISHLIST OPERATIONS ──────────────────────────────────────────
+  // ─── CART & WISHLIST OPERATIONS (FIXED FOR MONGODB _ID ROUTING) ──────────
   const toggleWishlist = (productId) => {
     setWishlist(prev => 
       prev.includes(productId) 
@@ -233,22 +229,23 @@ export const StoreProvider = ({ children }) => {
   };
 
   const addToCart = (product, quantity = 1) => {
+    const targetId = product._id || product.id;
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const existing = prev.find((item) => (item._id === targetId || item.id === targetId));
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+          (item._id === targetId || item.id === targetId) ? { ...item, quantity: item.quantity + quantity } : item
         );
       }
       return [...prev, { ...product, quantity }];
     });
   };
 
-  const removeFromCart = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
+  const removeFromCart = (id) => setCart((prev) => prev.filter((item) => (item._id !== id && item.id !== id)));
 
   const updateCartQuantity = (id, quantity) => {
     if (quantity <= 0) { removeFromCart(id); return; }
-    setCart((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)));
+    setCart((prev) => prev.map((item) => ((item._id === id || item.id === id) ? { ...item, quantity } : item)));
   };
 
   const clearCart = () => {
@@ -261,11 +258,12 @@ export const StoreProvider = ({ children }) => {
 
   const fetchAvailableCoupons = async () => {
     try {
-      const res = await fetch(`${API_URL}/coupons`);
+      const res = await fetch(`${API_URL}/api/coupons`);
       const data = await res.json();
       if (data.success) setAvailableCoupons(data.data);
     } catch (err) { console.error('Fetch coupons error:', err); }
   };
+
   useEffect(() => {
     fetchAvailableCoupons();
   }, []);
@@ -273,7 +271,7 @@ export const StoreProvider = ({ children }) => {
   // ─── COUPON LOGIC ────────────────────────────────────────────────────────
   const applyCoupon = async (code) => {
     try {
-      const res = await fetch(`${API_URL}/coupons/validate`, {
+      const res = await fetch(`${API_URL}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code }),
@@ -285,7 +283,7 @@ export const StoreProvider = ({ children }) => {
       }
       return { success: false, message: data.message || 'Invalid coupon.' };
     } catch (err) {
-      return { success: false, message: 'Server error' };
+      return { success: false, message: 'Server connection error' };
     }
   };
 
@@ -300,12 +298,12 @@ export const StoreProvider = ({ children }) => {
   // ─── ORDER PLACEMENT ─────────────────────────────────────────────────────
   const placeOrder = async (orderDetails) => {
     try {
-      const res = await fetch(`${API_URL}/orders`, {
+      const res = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...orderDetails,
-          userId: user?.id,
+          userId: user?.id || user?._id,
           userName: user?.name,
           items: cart,
           couponCode: appliedCoupon?.code,
@@ -321,7 +319,7 @@ export const StoreProvider = ({ children }) => {
       }
       return { success: false, message: data.message };
     } catch (err) {
-      return { success: false, message: 'Server error' };
+      return { success: false, message: 'Server checkout connection failure' };
     }
   };
 
