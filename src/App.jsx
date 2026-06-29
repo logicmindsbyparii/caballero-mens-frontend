@@ -100,11 +100,9 @@ const AppRoutes = () => {
       <Route
         path="/my-orders"
         element={
-          <ProtectedRoute>
-            <MainLayout>
-              <MyOrders />
-            </MainLayout>
-          </ProtectedRoute>
+          <MainLayout>
+            <MyOrders />
+          </MainLayout>
         }
       />
       
