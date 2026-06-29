@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Pencil, Trash2, X, Check, LogOut, 
@@ -460,6 +462,12 @@ const Admin = () => {
                                 <span className="text-stone-400 font-bold uppercase tracking-tighter">Payment Strategy</span>
                                 <span className="font-bold text-stone-900">{order.paymentMethod}</span>
                              </div>
+                             {order.paymentDetails?.paymentId && (
+                                <div className="flex justify-between items-center text-[#c24b10]">
+                                   <span className="font-bold uppercase tracking-tighter">Payment Txn ID</span>
+                                   <span className="font-mono text-[10px] bg-[#c24b10]/10 px-2 py-1 rounded">{order.paymentDetails.paymentId}</span>
+                                </div>
+                             )}
                              {order.couponCode && (
                                 <div className="flex justify-between items-center text-green-600">
                                    <span className="font-bold uppercase tracking-tighter">Voucher Benefit ({order.couponCode})</span>
