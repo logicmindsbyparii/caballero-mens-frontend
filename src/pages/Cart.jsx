@@ -1,12 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 const Cart = () => {
-  const { cart, updateCartQuantity, removeFromCart } = useStore();
+  const { cart, updateCartQuantity, removeFromCart, discountAmount, appliedCoupon, applyCoupon, removeCoupon } = useStore();
   const [cartItems, setCartItems] = useState([]);
   const [brokenImages, setBrokenImages] = useState({});
+  const [couponCode, setCouponCode] = useState('');
+  const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,7 +27,14 @@ const Cart = () => {
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 1999 ? 0 : 99;
-  const total = subtotal + shipping;
+  const total = Math.max(0, subtotal - discountAmount) + shipping;
+
+  const handleApplyCoupon = async (e) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    const res = await applyCoupon(couponCode);
+    setCouponMessage({ type: res.success ? 'success' : 'error', text: res.message });
+  };
 
   const handleProceedToCheckout = () => {
     navigate('/checkout');
@@ -111,11 +121,48 @@ const Cart = () => {
           {/* Order Summary */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-beige h-fit sticky top-24">
             <h2 className="text-xl font-serif text-charcoal mb-4">Order Summary</h2>
+            {/* Coupon Section */}
+            <div className="mb-6 border-b border-beige pb-6">
+              {!appliedCoupon ? (
+                <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Enter coupon code"
+                    className="flex-1 px-4 py-2 border border-beige rounded-xl text-sm focus:outline-none focus:border-brown bg-cream"
+                  />
+                  <button type="submit" className="bg-charcoal text-white px-4 py-2 rounded-xl text-sm hover:bg-brown transition-colors">
+                    Apply
+                  </button>
+                </form>
+              ) : (
+                <div className="flex items-center justify-between bg-green-50 border border-green-200 px-4 py-3 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-700 font-medium text-sm">{appliedCoupon.code}</span>
+                    <span className="text-green-600 text-xs">Applied!</span>
+                  </div>
+                  <button onClick={removeCoupon} className="text-red-500 hover:text-red-700 text-sm">Remove</button>
+                </div>
+              )}
+              {couponMessage.text && !appliedCoupon && (
+                <p className={`text-xs mt-2 ${couponMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                  {couponMessage.text}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-3 border-b border-beige pb-4">
               <div className="flex justify-between text-muted">
                 <span>Subtotal</span>
                 <span>₹{subtotal.toLocaleString()}</span>
               </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount ({appliedCoupon.code})</span>
+                  <span>-₹{discountAmount.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between text-muted">
                 <span>Shipping</span>
                 <span>{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
