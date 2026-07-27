@@ -9,7 +9,7 @@ import RazorpayCheckout from '../components/RazorpayCheckout';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Checkout = () => {
-  const { cart, clearCart, user } = useStore();
+  const { cart, clearCart, user, discountAmount, appliedCoupon } = useStore();
   const navigate = useNavigate();
   const paymentDone = useRef(false);
 
@@ -27,7 +27,7 @@ const Checkout = () => {
 
   const subtotal = (cart || []).reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 1999 ? 0 : 99;
-  const total = subtotal + shipping;
+  const total = Math.max(0, subtotal - discountAmount) + shipping;
 
   const validate = () => {
     const e = {};
@@ -62,7 +62,7 @@ const Checkout = () => {
           userName: address.fullName,
           items: cart,
           subtotal,
-          discount: 0,
+          discount: discountAmount,
           total,
           paymentMethod: 'Razorpay',
           paymentDetails: { paymentId: paymentData?.paymentId || 'mock' },
@@ -322,6 +322,12 @@ const Checkout = () => {
                 <span style={{ color: '#666', fontSize: '14px' }}>Subtotal</span>
                 <span style={{ color: '#333', fontSize: '14px' }}>₹{subtotal.toLocaleString()}</span>
               </div>
+              {appliedCoupon && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ color: '#2c7a5c', fontSize: '14px' }}>Discount ({appliedCoupon.code})</span>
+                  <span style={{ color: '#2c7a5c', fontSize: '14px' }}>-₹{discountAmount.toLocaleString()}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <span style={{ color: '#666', fontSize: '14px' }}>Shipping</span>
                 <span style={{ color: shipping === 0 ? '#2c7a5c' : '#333', fontSize: '14px', fontWeight: shipping === 0 ? '600' : '400' }}>
