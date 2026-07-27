@@ -53,12 +53,6 @@ const AdminLogin = () => {
             </div>
           )}
 
-          {/* Credentials hint */}
-          <div className="bg-beige border border-brown/20 rounded-xl px-4 py-3 mb-6 text-xs text-muted">
-            <strong className="text-brown">Demo Credentials:</strong><br />
-            Username: <code className="text-charcoal">caballero_admin</code><br />
-            Password: <code className="text-charcoal">Caballero@2025</code>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username */}
