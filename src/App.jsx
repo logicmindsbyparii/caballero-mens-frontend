@@ -15,8 +15,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Wishlist from './pages/Wishlist';
 import MyOrders from './pages/MyOrders';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
+// import PrivacyPolicy from './pages/PrivacyPolicy';
+// import TermsOfService from './pages/TermsOfService';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 
@@ -137,8 +137,8 @@ const AppRoutes = () => {
         }
       />
 
-      <Route path="/privacy-policy" element={<MainLayout><PrivacyPolicy /></MainLayout>} />
-      <Route path="/terms-of-service" element={<MainLayout><TermsOfService /></MainLayout>} />
+      {/* <Route path="/privacy-policy" element={<MainLayout><PrivacyPolicy /></MainLayout>} /> */}
+      {/* <Route path="/terms-of-service" element={<MainLayout><TermsOfService /></MainLayout>} /> */}
 
       {/* Checkout & Order */}
       <Route path="/checkout" element={<MainLayout><Checkout /></MainLayout>} />
