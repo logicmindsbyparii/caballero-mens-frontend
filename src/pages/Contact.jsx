@@ -42,10 +42,10 @@ const Contact = () => {
               </p>
 
               {[
-                { Icon: MapPin, label: 'Visit Us', value: '123 Fashion Street, Ring Road, Surat, Gujarat 395007' },
-                { Icon: Phone, label: 'Call Us', value: '+91 98765 43210', href: 'tel:+919876543210' },
+                { Icon: MapPin, label: 'Visit Us', value: 'Shop no - 137, TIMES WORLD, Bhimrad-Althan Rd, Althan, Surat, Gujarat 395007' },
+                { Icon: Phone, label: 'Call Us', value: '+91 96244 53722', href: 'tel:+91 96244 53722' },
                 { Icon: Mail, label: 'Email Us', value: 'hello@caballerocasual.com', href: 'mailto:hello@caballerocasual.com' },
-                { Icon: Clock, label: 'Store Hours', value: 'Mon – Sat: 10:00 AM – 8:00 PM' },
+                { Icon: Clock, label: 'Store Hours', value: 'Mon – Sun: 10:00 AM – 9:30 PM' },
               ].map(({ Icon, label, value, href }) => (
                 <div key={label} className="flex items-start gap-4 p-4 rounded-xl border border-beige hover:border-brown transition-colors duration-300 group">
                   <div className="w-10 h-10 bg-brown/10 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-brown/20 transition-colors">
