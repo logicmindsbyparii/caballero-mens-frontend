@@ -139,11 +139,11 @@ const Footer = () => {
           </p>
 
           {/* Right: Privacy & Terms (working links) */}
-          <div className="flex gap-4 text-xs text-white/40 justify-center md:justify-end">
+          {/* <div className="flex gap-4 text-xs text-white/40 justify-center md:justify-end">
             <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <span>·</span>
             <Link to="/terms-of-service" className="hover:text-white transition-colors">Terms of Services</Link>
-          </div>
+          </div> */}
         </div>
       </div>
 
